@@ -1,6 +1,31 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <Windows.h>
+
+typedef enum {
+    SUCCESS = 0,
+    INCORRECT_INPUT,
+    INCORRECT_ARGUMENTS_COUNT,
+    OVERFLOW_ERROR,
+    MALLOC_ERROR,
+    FILE_OPENING_ERROR,
+    FILE_READING_ERROR,
+    MEMORY_ALLOCATION_ERROR,
+    UNKNOWN_ERROR
+} ErrorCode;
+
+static const char* errorMessages[] = {
+        "Всё хорошо",
+        "Некорректный ввод, попробуйте ещё раз",
+        "Неккоректное кол-во данных",
+        "Произошло переполнение",
+        "Проблемы с выделением памяти",
+        "Не удалось открыть файл",
+        "Файл прочитан не полностью",
+        "Ошибка выделения памяти",
+        "Неизвестная ошибка, что-то пошло не так"
+};
 
 typedef struct {
     int id;
@@ -26,35 +51,39 @@ int compareEmployees(const void *a, const void *b) {
 }
 
 int main(int argc, char *argv[]) {
-    if (argc < 4) {
-        printf("Usage: program_name input_file flag output_file\n");
-        return 1;
+    if (argc != 4) {
+        printf("%s", errorMessages[INCORRECT_ARGUMENTS_COUNT]);
+        return INCORRECT_ARGUMENTS_COUNT;
     }
 
     FILE *inputFile = fopen(argv[1], "r");
+
     if (inputFile == NULL) {
-        printf("Error opening input file.\n");
-        return 1;
+        printf("%s", errorMessages[FILE_OPENING_ERROR]);
+        return FILE_OPENING_ERROR;
     }
 
-    char flag = argv[2][1];
+    if (strchr("-/",argv[2][0]) != NULL && strchr("da", argv[2][1]) != NULL) {
+        char flag = argv[2][1];
+    }
 
     FILE *outputFile = fopen(argv[3], "w");
     if (outputFile == NULL) {
-        printf("Error opening output file.\n");
+        printf("%s", errorMessages[FILE_OPENING_ERROR]);
         fclose(inputFile);
-        return 1;
+        return FILE_OPENING_ERROR;
     }
 
     int numEmployees = 0;
     fscanf(inputFile, "%d", &numEmployees);
 
     Employee *employees = malloc(numEmployees * sizeof(Employee));
+
     if (employees == NULL) {
-        printf("Error allocating memory.\n");
+        printf("%s", errorMessages[MEMORY_ALLOCATION_ERROR]);
         fclose(inputFile);
         fclose(outputFile);
-        return 1;
+        return MEMORY_ALLOCATION_ERROR;
     }
 
     for (int i = 0; i < numEmployees; i++) {
@@ -79,5 +108,5 @@ int main(int argc, char *argv[]) {
     fclose(inputFile);
     fclose(outputFile);
 
-    return 0;
+    return SUCCESS;
 }
