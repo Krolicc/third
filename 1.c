@@ -29,17 +29,17 @@ static const char* errorMessages[] = {
     "Неизвестная ошибка, что-то пошло не такф"
 };
 
-void dumpSignedInt(int *ptr) {
-    // little-endian
-    unsigned char *bytePtr = (unsigned char *)ptr;
-
-    for (int i = sizeof(int) - 1; i >= 0; --i) {
-        for (int j = 7; j >= 0; --j) {
-            printf("%d", (bytePtr[i] >> j) & 1);
-        }
-        printf(" ");
-    }
-}
+//void dumpSignedInt(int *ptr) {
+//    // little-endian
+//    unsigned char *bytePtr = (unsigned char *)ptr;
+//
+//    for (int i = sizeof(int) - 1; i >= 0; --i) {
+//        for (int j = 7; j >= 0; --j) {
+//            printf("%d", (bytePtr[i] >> j) & 1);
+//        }
+//        printf(" ");
+//    }
+//}
 
 ErrorCode intToBinOctHex(const int number, const int baseDegree) {
     if (baseDegree > 5 || baseDegree < 1)
@@ -96,8 +96,8 @@ int main() {
     SetConsoleCP(1251);
     SetConsoleOutputCP(1251);
 
-    int number = -123;
-    int baseDegree = 4;
+    int number = -23;
+    int baseDegree = 5;
 
     switch (intToBinOctHex(number, baseDegree)) {
         case INCORRECT_INPUT:
