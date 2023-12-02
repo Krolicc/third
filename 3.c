@@ -11,6 +11,7 @@ typedef enum {
     MALLOC_ERROR,
     FILE_OPENING_ERROR,
     FILE_READING_ERROR,
+    FILE_CLOSING_ERROR,
     MEMORY_ALLOCATION_ERROR,
     UNKNOWN_ERROR
 } ErrorCode;
@@ -23,6 +24,7 @@ static const char* errorMessages[] = {
         "Проблемы с выделением памяти",
         "Не удалось открыть файл",
         "Файл прочитан не полностью",
+        "Не удалось закрыть файл",
         "Ошибка выделения памяти",
         "Неизвестная ошибка, что-то пошло не так"
 };
@@ -105,8 +107,16 @@ int main(int argc, char *argv[]) {
     }
 
     free(employees);
-    fclose(inputFile);
-    fclose(outputFile);
+
+    if(fclose(inputFile)==EOF) {
+        perror(errorMessages[FILE_CLOSING_ERROR]);
+        return FILE_CLOSING_ERROR;
+    }
+
+    if(fclose(outputFile)==EOF) {
+        perror(errorMessages[FILE_CLOSING_ERROR]);
+        return FILE_CLOSING_ERROR;
+    }
 
     return SUCCESS;
 }
