@@ -513,7 +513,6 @@ int main(int argc, char* argv[]) {
         printf("%s\n", errorMessages[INCORRECT_COUNT_ARGUMENTS]);
         return INCORRECT_COUNT_ARGUMENTS;
     }
-
     Route* RootRoute = createRoute();
     RootRoute->firstStop = createStop();
     RootRoute->count = 0;
@@ -525,32 +524,67 @@ int main(int argc, char* argv[]) {
             int count = 0;
 
             fscanf(file, "%s", coordinate);
+
             if(ferror(file)) {
                 printf("%s\n", errorMessages[FILE_READING_ERROR]);
-                free(RootRoute);
+                freeRoutes(RootRoute);
                 return FILE_READING_ERROR;
             }
+
+            int pointCount = 0;
+
+            for(int j = 0; j < strlen(coordinate); j++) {
+                if(strchr(",", coordinate[j]) != NULL)
+                    pointCount++;
+            }
+
+            for(int j = 0; j < strlen(coordinate); j++) {
+                if(strchr("0123456789,", coordinate[j]) == NULL || pointCount != 1 || strlen(coordinate) < 2) {
+                    printf("В файле %s неправильно указаны координаты остановки", argv[i]);
+                    return INCORRECT_INPUT_ARGUMENTS;
+                }
+            }
+
+            int isVehicleNumber = 0, isMarker = 0, isDateArrive = 0, isDateDeparture = 0;
+
             int isArriveData = 1;
             while (fscanf(file, "%s", arg) == 1) {
                 if(ferror(file)) {
                     printf("%s\n", errorMessages[FILE_READING_ERROR]);
-                    free(RootRoute);
+                    freeRoutes(RootRoute);
                     return FILE_READING_ERROR;
                 }
                 count++;
                 if(strcmp("ST", arg) == 0 || strcmp("EN", arg) == 0 || strcmp("IN", arg) == 0) {
                     strcpy(marker, arg);
-                } else if (strchr(".", arg[2]) != NULL) {
+                    isMarker++;
+                } else if (strchr(".", arg[2]) != NULL && strchr(".", arg[5]) != NULL) {
                     if(isArriveData) {
                         strcpy(dateArrive, arg);
                         fscanf(file, "%s", arg);
+                        if(ferror(file)) {
+                            printf("%s\n", errorMessages[FILE_READING_ERROR]);
+                            freeRoutes(RootRoute);
+                            return FILE_READING_ERROR;
+                        }
+
+                        if(strchr(":", arg[2]) == NULL || strchr(":", arg[5]) == NULL) isDateArrive--;
+
                         sprintf(dateArrive, "%s %s", dateArrive, arg);
                         isArriveData = 0;
+                        isDateArrive++;
                     } else {
+                        isDateDeparture++;
                         isArriveData = 1;
                         int isArriveMoreThenDeparture = 0;
                         strcpy(dateDeparture, arg);
                         fscanf(file, "%s", arg);
+                        if(ferror(file)) {
+                            printf("%s\n", errorMessages[FILE_READING_ERROR]);
+                            freeRoutes(RootRoute);
+                            return FILE_READING_ERROR;
+                        }
+                        if(strchr(":", arg[2]) == NULL || strchr(":", arg[5]) == NULL) isDateDeparture--;
                         sprintf(dateDeparture, "%s %s", dateDeparture, arg);
                         for(int j=9; j > -1; j--) {
                             if(dateDeparture[j] < dateArrive[j]) {
@@ -577,9 +611,16 @@ int main(int argc, char* argv[]) {
                     }
                 } else {
                     strcpy(vehicleNumber, arg);
+                    isVehicleNumber++;
                 }
 
                 if (count == 4){
+                    if(!isVehicleNumber || !isDateArrive || !isDateDeparture || !isMarker) {
+                        printf("В файле %s неправильно указаны входные данные", argv[i]);
+                        return INCORRECT_INPUT_ARGUMENTS;
+                    }
+
+                    isVehicleNumber = 0, isMarker = 0, isDateArrive = 0, isDateDeparture = 0;
 
                     Stop *extraStop = createStop();
 
@@ -610,6 +651,7 @@ int main(int argc, char* argv[]) {
 
             if ( fclose (file) == EOF) {
                 printf ("%s", errorMessages[FILE_CLOSING_ERROR]);
+                freeRoutes(RootRoute);
                 return FILE_CLOSING_ERROR;
             }
 
@@ -617,7 +659,7 @@ int main(int argc, char* argv[]) {
 
         } else {
             printf("%s\n", errorMessages[FILE_OPENING_ERROR]);
-            free(RootRoute);
+            freeRoutes(RootRoute);
             return FILE_OPENING_ERROR;
         }
 
