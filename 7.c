@@ -141,7 +141,7 @@ Liver* load_livers_from_file(const char* filepath) {
     while (fgets(line, sizeof(line), file)) {
         if(ferror(file)) {
             printf("%s\n", errorMessages[FILE_READING_ERROR]);
-            free(head);
+//            free(head);
             exit(FILE_READING_ERROR);
         }
         Liver* new_liver = create_liver();
@@ -149,21 +149,21 @@ Liver* load_livers_from_file(const char* filepath) {
         fgets(line, sizeof(line), file);
         if(ferror(file)) {
             printf("%s\n", errorMessages[FILE_READING_ERROR]);
-            free(head);
+//            free(head);
             exit(FILE_READING_ERROR);
         }
         sscanf(line, "%s", new_liver->firstname);
         fgets(line, sizeof(line), file);
         if(ferror(file)) {
             printf("%s\n", errorMessages[FILE_READING_ERROR]);
-            free(head);
+//            free(head);
             exit(FILE_READING_ERROR);
         }
         sscanf(line, "%s", new_liver->patronymic);
         fgets(line, sizeof(line), file);
         if(ferror(file)) {
             printf("%s\n", errorMessages[FILE_READING_ERROR]);
-            free(head);
+//            free(head);
             exit(FILE_READING_ERROR);
         }
         sscanf(line, "%d%d%d", &new_liver->birth_day,
@@ -171,14 +171,14 @@ Liver* load_livers_from_file(const char* filepath) {
         fgets(line, sizeof(line), file);
         if(ferror(file)) {
             printf("%s\n", errorMessages[FILE_READING_ERROR]);
-            free(head);
+//            free(head);
             exit(FILE_READING_ERROR);
         }
         sscanf(line, "%c", &new_liver->gender);
         fgets(line, sizeof(line), file);
         if(ferror(file)) {
             printf("%s\n", errorMessages[FILE_READING_ERROR]);
-            free(head);
+//            free(head);
             exit(FILE_READING_ERROR);
         }
         sscanf(line, "%lf", &new_liver->average_income);
@@ -315,7 +315,7 @@ Modification* undo_modifications(Liver** head, const int* modification_count, Mo
         root = root->previous;
     }
 
-    free(root);
+//    free(root);
     return root = create_modification();
 }
 
@@ -329,10 +329,10 @@ int main() {
 
     int modification_count = 0;
 
-    char filepath[256] = "7_.txt";
-//    printf("Введите путь к файлу: ");
-//    fgets(filepath, sizeof(filepath), stdin);
-//    filepath[strcspn(filepath, "\n")] = 0;
+    char filepath[256];
+    printf("Введите путь к файлу: ");
+    fgets(filepath, sizeof(filepath), stdin);
+    filepath[strcspn(filepath, "\n")] = 0;
 
     head = load_livers_from_file(filepath);
 
