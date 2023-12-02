@@ -1,346 +1,410 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <Windows.h>
 
 typedef enum {
     SUCCESS = 0,
-    INCORRECT_INPUT,
+    INCORRECT_INPUT_ARGUMENTS,
+    INCORRECT_COUNT_ARGUMENTS,
     OVERFLOW_ERROR,
-    MALLOC_ERROR,
+    MEMORY_ALLOCATION_ERROR,
     FILE_OPENING_ERROR,
     FILE_READING_ERROR,
+    FILE_CLOSING_ERROR,
     UNKNOWN_ERROR
 } ErrorCode;
 
 static const char* errorMessages[] = {
         "Всё хорошо",
-        "Некорректный ввод, попробуйте ещё раз",
+        "Некорректный ввод аргументов, попробуйте ещё раз",
+        "Некорректный кол-во аргументов, попробуйте ещё раз",
         "Произошло переполнение",
         "Проблемы с выделением памяти",
         "Не удалось открыть файл",
         "Файл прочитан не полностью",
+        "Ошибка закрытия файла",
         "Неизвестная ошибка, что-то пошло не так"
 };
 
 typedef struct Node {
-    char* word;
+    char *word;
     int count;
-    struct Node* left;
-    struct Node* right;
+    int wordLength;
+    struct Node *left;
+    struct Node *right;
 } Node;
 
-void saveTreeToFile(FILE* file, Node* root) {
-    if (root != NULL) {
-        saveTreeToFile(file, root->left);
-        fwrite(root, sizeof(Node), 1, file);
-        saveTreeToFile(file, root->right);
-    }
-}
-
-int getDepth(Node* root) {
-    if (root == NULL)
-        return 0;
-
-    int leftDepth = getDepth(root->left);
-    int rightDepth = getDepth(root->right);
-
-    if (leftDepth > rightDepth)
-        return leftDepth + 1;
-    else
-        return rightDepth + 1;
-}
-
-Node* restoreTreeFromFile(FILE* file) {
-    Node* node = (Node*)malloc(sizeof(Node));
-    fread(node, sizeof(Node), 1, file);
-
-    if (node == NULL)
-        return NULL;
-
-    node->word = strdup(node->word);
-    node->left = restoreTreeFromFile(file);
-    node->right = restoreTreeFromFile(file);
-
-    return node;
-}
-
-Node* createNode(char* word) {
-    Node* newNode = (Node*)malloc(sizeof(Node));
-    newNode->word = strdup(word);
-    newNode->count = 1;
-    newNode->left = NULL;
-    newNode->right = NULL;
-    return newNode;
-}
-
-Node* insertNode(Node* root, char* word) {
-    if (root == NULL)
-        return createNode(word);
-
-    int cmp = strcmp(word, root->word);
-    if (cmp == 0)
-        root->count++;
-    else if (cmp < 0)
-        root->left = insertNode(root->left, word);
-    else
-        root->right = insertNode(root->right, word);
-
-    return root;
-}
-
-void displayWordCount(Node* root) {
-    if (root != NULL) {
-        displayWordCount(root->left);
-        printf("%s: %d\n", root->word, root->count);
-        displayWordCount(root->right);
-    }
-}
-
-Node* findMin(Node* root) {
-    if (root == NULL)
-        return NULL;
-    else if (root->left == NULL)
-        return root;
-    else
-        return findMin(root->left);
-}
-
-Node* findMax(Node* root) {
-    if (root == NULL)
-        return NULL;
-    else if (root->right == NULL)
-        return root;
-    else
-        return findMax(root->right);
-}
-
-Node* searchWord(Node* root, char* word) {
-    if (root == NULL || strcmp(root->word, word) == 0)
-        return root;
-    else if (strcmp(word, root->word) < 0)
-        return searchWord(root->left, word);
-    else
-        return searchWord(root->right, word);
-}
-
-void displayMostFrequent(Node* root, int n) {
-    if (root == NULL)
-        return;
-
-    displayMostFrequent(root->right, n);
-
-    if (n > 0) {
-        printf("%s: %d\n", root->word, root->count);
-        n--;
-    }
-
-    displayMostFrequent(root->left, n);
-}
-
-char* longestWord(Node* root) {
-    if (root == NULL)
-        return NULL;
-
-    char* longest = root->word;
-    int longestLength = strlen(longest);
-
-    Node* current = root;
-    while (current != NULL) {
-        if (strlen(current->word) > longestLength) {
-            longest = current->word;
-            longestLength = strlen(longest);
-        }
-        current = current->left;
-    }
-
-    return longest;
-}
-
-char* shortestWord(Node* root) {
-    if (root == NULL)
-        return NULL;
-
-    char* shortest = root->word;
-    int shortestLength = strlen(shortest);
-
-    Node* current = root;
-    while (current != NULL) {
-        if (strlen(current->word) < shortestLength) {
-            shortest = current->word;
-            shortestLength = strlen(shortest);
-        }
-        current = current->left;
-    }
-
-    return shortest;
-}
-
-//void saveTreeToFile(FILE* file, Node* root) {
-//    if (root != NULL) {
-//        saveTreeToFile(file, root->left);
-//        fwrite(root, sizeof(Node), 1, file);
-//        saveTreeToFile(file, root->right);
-//    }
-//}
-//
-//Node* restoreTreeFromFile(FILE* file) {
-//    Node* node = (Node*)malloc(sizeof(Node));
-//    fread(node, sizeof(Node), 1, file);
-//
-//    if (node == NULL)
-//        return NULL;
-//
-//    node->left = restoreTreeFromFile(file);
-//    node->right = restoreTreeFromFile(file);
-//
-//    return node;
-//}
-
 void freeTree(Node* root) {
-    if (root == NULL)
+    if (root == NULL) {
         return;
+    }
 
-    free(root->word);
     freeTree(root->left);
     freeTree(root->right);
     free(root);
 }
 
-int main(int argc, char* argv[]) {
+Node *createNode(char *word) {
+    Node *node = (Node *)malloc(sizeof(Node));
+    if (node == NULL) {
+        printf("%s", errorMessages[MEMORY_ALLOCATION_ERROR]);
+        exit(MEMORY_ALLOCATION_ERROR);
+    }
+    node->word = strdup(word);
+    node->count = 1;
+    node->wordLength = (int)strlen(word);
+    node->left = NULL;
+    node->right = NULL;
+    return node;
+}
+
+void insertNode(Node **tree, char *word) {
+    if (*tree == NULL) *tree = createNode(word);
+    else {
+        int cmp = strcmp(word, (*tree)->word);
+
+        if (cmp < 0) insertNode(&(*tree)->left, word);
+        else if (cmp > 0) insertNode(&(*tree)->right, word);
+        else (*tree)->count++;
+    }
+}
+
+void printNode(Node *node) {
+    if (node != NULL) {
+        printNode(node->left);
+        printf("%s: %d\n", node->word, node->count);
+        printNode(node->right);
+    }
+}
+
+Node *searchNode(Node *tree, char *word) {
+    if (tree == NULL) {
+        return NULL;
+    }
+    int cmp = strcmp(word, tree->word);
+    if (cmp < 0) {
+        return searchNode(tree->left, word);
+    }
+    else if (cmp > 0) {
+        return searchNode(tree->right, word);
+    }
+    else {
+        return tree;
+    }
+}
+
+Node *findMinLength(Node *tree, Node *extra) {
+    if (extra == NULL)
+        extra = tree;
+
+
+    if(tree!=NULL) {
+        if(tree->wordLength < extra->wordLength) extra = tree;
+
+        extra = findMinLength(tree->left, extra);
+        extra = findMinLength(tree->right, extra);
+    }
+
+    return extra;
+}
+
+Node *findMaxLength(Node *tree, Node *extra) {
+    if (extra == NULL)
+        extra = tree;
+
+    if(tree!=NULL) {
+        if(tree->wordLength > extra->wordLength) extra = tree;
+
+        extra = findMaxLength(tree->left, extra);
+        extra = findMaxLength(tree->right, extra);
+    }
+
+    return extra;
+}
+
+Node *findMax(Node *tree, Node *extra, int n, char* word) {
+    if (extra == NULL)
+        extra = tree;
+    if (tree != NULL) {
+        if(extra->count < tree->count+1 && (tree->count < n+1 || n == 0) && (strcmp(tree->word, word) != 0 || strcmp("", word) == 0))
+            extra = tree;
+        extra = findMax(tree->left, extra, n, word);
+        extra = findMax(tree->right, extra, n, word);
+    }
+    return extra;
+}
+
+int getDepth(Node *tree) {
+    if (tree == NULL) {
+        return 0;
+    }
+    int leftDepth = getDepth(tree->left);
+    int rightDepth = getDepth(tree->right);
+
+    if (leftDepth > rightDepth) {
+        return leftDepth + 1;
+    }
+    else {
+        return rightDepth + 1;
+    }
+}
+
+void saveTreeToFile(Node *tree, FILE *file) {
+    if (tree != NULL) {
+        saveTreeToFile(tree->left, file);
+        fwrite(tree->word, sizeof(char), strlen(tree->word), file);
+        fwrite("\n", sizeof(char), 1, file);
+
+        char stringInt[90];
+        itoa(tree->count, stringInt, 10);
+
+        fwrite(stringInt, sizeof(char), strlen(stringInt), file);
+        fwrite("\n", sizeof(char), 1, file);
+        saveTreeToFile(tree->right, file);
+    }
+}
+
+void changeTreeCount(Node **tree, char* word, int count) {
+    Node *extra = *tree;
+    if(extra != NULL) {
+        if(strcmp(extra->word, word) == 0 ) {
+            extra->count = count;
+            return;
+        }
+
+        changeTreeCount(&extra->left, word, count);
+        changeTreeCount(&extra->right, word, count);
+
+    }
+}
+
+Node *loadTreeFromFile(FILE *file) {
+    Node *tree = NULL;
+    char word[256];
+    int count;
+
+    while (fscanf(file, "%s\n", word) != EOF) {
+        fscanf(file, "%d\n", &count);
+        insertNode(&tree, word);
+
+        changeTreeCount(&tree, word, count);
+    }
+    return tree;
+}
+
+int main(int argc, char *argv[]) {
+    SetConsoleCP(1251);
+    SetConsoleOutputCP(1251);
+
     if (argc < 3) {
-        printf("Usage: ./word_stats <file_path> <separator1> <separator2> ...\n");
-        return 1;
+        printf("%s\n", errorMessages[INCORRECT_COUNT_ARGUMENTS]);
+        return INCORRECT_COUNT_ARGUMENTS;
     }
 
-    char* file_path = argv[1];
-    FILE* file = fopen(file_path, "r");
+    char *filePath = argv[1];
+    FILE *file = fopen(filePath, "r");
     if (file == NULL) {
-        printf("Failed to open file: %s\n", file_path);
-        return 1;
+        printf("%s\n", errorMessages[FILE_OPENING_ERROR]);
+        return FILE_OPENING_ERROR;
     }
 
-    Node* root = NULL;
-    char word[100];
+    Node *tree = NULL;
+    char line[256];
 
-    while (fscanf(file, "%99[^", " \t\n]%*c", word) == 1) {
-        for (int i = 2; i < argc; i++) {
-            char* separator = argv[i];
-            char* token = strtok(word, separator);
-            while (token != NULL) {
-                root = insertNode(root, token);
-                token = strtok(NULL, separator);
-            }
+    // Read file line by line
+
+    while (fgets(line, sizeof(line), file)) {
+        if(ferror(file)) {
+            printf("%s\n", errorMessages[FILE_READING_ERROR]);
+            free(tree);
+            return FILE_READING_ERROR;
+        }
+        char *word = strtok(line, argv[2]);
+        while (word != NULL) {
+            // Insert word into the tree
+            insertNode(&tree, word);
+            word = strtok(NULL, argv[2]);
         }
     }
 
-    fclose(file);
+    // Close the file
+    if ( fclose (file) == EOF) {
+        printf ("%s", errorMessages[FILE_CLOSING_ERROR]);
+        free(tree);
+        return FILE_CLOSING_ERROR;
+    }
 
-    int option;
-    while (1) {
-        printf("\nOptions:\n");
-        printf("1. Display word count\n");
-        printf("2. Search word count\n");
-        printf("3. Display most frequent words\n");
-        printf("4. Display longest and shortest words\n");
-        printf("5. Save tree to file\n");
-        printf("6. Restore tree from file\n");
-        printf("7. Exit\n");
-        printf("Enter option number: ");
-        scanf("%d", &option);
-        getchar();
+    printf("Введите цифру, соответсвующую одной из опций:\n");
+    printf("1. Сколько раз встречается слово 'х' в контексте;\n");
+    printf("2. n наиболее часто встречающихся слов в контексте;\n");
+    printf("3. Самое длинное слово;\n");
+    printf("4. Самое короткое слово;\n");
+    printf("5. Найти глубину построенного дерева;\n");
+    printf("6. Загрузить дерево в файл;\n");
+    printf("7. Выгрузить дерево из файла;\n");
+    printf("0. Выйти.\n\n");
 
-        switch (option) {
-            case 1:
-                displayWordCount(root);
+    int user_input = -1;
+    char numString[90];
+
+
+    while(user_input != 0) {
+
+        printf("Введите номер опции: ");
+        scanf("%s", numString);
+        if(strchr("-0123456789", numString[0]) == NULL) {
+            printf("Неверный выбор.\n");
+            continue;
+        }
+
+        user_input = atoi(numString);
+
+        switch (user_input) {
+            case 1: {
+                char input[256];
+                printf("Введите слово для поиска: ");
+                scanf("%s", input);
+                Node *searchResult = searchNode(tree, input);
+                if (searchResult != NULL) printf("Cлово '%s' встречается %d кол-во раз.\n", searchResult->word, searchResult->count);
+                else printf("Слово '%s'не найдено.\n", input);
                 break;
+            }
             case 2: {
-                char searchWord[100];
-                printf("Enter word to search: ");
-                scanf("%99[^\n]", searchWord);
-                getchar();
-
-                Node* searchResult = searchWord(root, searchWord);
-                if (searchResult != NULL)
-                    printf("Word '%s' count: %d\n", searchWord, searchResult->count);
-                else
-                    printf("Word not found\n");
-
+                int n;
+                printf("Введите n: ");
+                scanf("%d", &n);
+                printf("Топ %d часто встречающихся слов:\n", n);
+                // Print the first n most frequent words
+                Node *maxNode = findMax(tree, NULL, 0, "");
+                while (n>0) {
+                    printf("%s: %d\n", maxNode->word, maxNode->count);
+                    maxNode = findMax(tree, NULL, maxNode->count, maxNode->word);
+                    n--;
+                }
                 break;
             }
             case 3: {
-                int n;
-                printf("Enter number of most frequent words to display: ");
-                scanf("%d", &n);
-                getchar();
-
-                displayMostFrequent(root, n);
+                Node *longestWord = findMaxLength(tree, NULL);
+                if (longestWord != NULL) {
+                    printf("Самое длинное слово: %s\n", longestWord->word);
+                }
                 break;
             }
             case 4: {
-                char* longest = longestWord(root);
-                char* shortest = shortestWord(root);
-
-                if (longest != NULL)
-                    printf("Longest word: '%s'\n", longest);
-                else
-                    printf("No words found\n");
-
-                if (shortest != NULL)
-                    printf("Shortest word: '%s'\n", shortest);
-                else
-                    printf("No words found\n");
-
+                Node *shortestWord = findMinLength(tree, NULL);
+                if (shortestWord != NULL) {
+                    printf("Самое короткое слово: %s\n", shortestWord->word);
+                }
                 break;
             }
             case 5: {
-                char saveFilePath[100];
-                printf("Enter file path to save tree: ");
-                scanf("%99[^\n]", saveFilePath);
-                getchar();
-
-                FILE* saveFile = fopen(saveFilePath, "wb");
-                if (saveFile == NULL) {
-                    printf("Failed to open file for saving: %s\n", saveFilePath);
-                    break;
-                }
-
-                saveTreeToFile(saveFile, root);
-
-                fclose(saveFile);
-                printf("Tree saved to file: %s\n", saveFilePath);
+                printf("Глубина дерева: %d\n", getDepth(tree));
                 break;
             }
             case 6: {
-                char restoreFilePath[100];
-                printf("Enter file path to restore tree: ");
-                scanf("%99[^\n]", restoreFilePath);
-                getchar();
-
-                FILE* restoreFile = fopen(restoreFilePath, "rb");
-                if (restoreFile == NULL) {
-                    printf("Failed to open file for restoring: %s\n", restoreFilePath);
-                    break;
+                FILE *outputFile = fopen("tree.txt", "w");
+                if (outputFile == NULL) {
+                    printf("%s\n", errorMessages[FILE_OPENING_ERROR]);
+                    free(tree);
+                    return FILE_OPENING_ERROR;
                 }
-
-                Node* restoredTree = restoreTreeFromFile(restoreFile);
-                if (restoredTree != NULL) {
-                    freeTree(root);
-                    root = restoredTree;
-                    printf("Tree restored from file: %s\n", restoreFilePath);
+                saveTreeToFile(tree, outputFile);
+                if ( fclose (outputFile) == EOF) {
+                    printf ("%s", errorMessages[FILE_CLOSING_ERROR]);
+                    free(tree);
+                    return FILE_CLOSING_ERROR;
                 }
-                else {
-                    printf("Failed to restore tree from file: %s\n", restoreFilePath);
-                }
-
-                fclose(restoreFile);
+                printf("Дерево загружено!\n");
                 break;
             }
-            case 7:
-                freeTree(root);
-                return SUCCESS;
+            case 7: {
+                FILE *inputFile = fopen("tree.txt", "r");
+                if (inputFile == NULL) {
+                    printf("%s\n", errorMessages[FILE_OPENING_ERROR]);
+                    free(tree);
+                    return FILE_OPENING_ERROR;
+                }
+                Node *loadedTree = loadTreeFromFile(inputFile);
+                if ( fclose (inputFile) == EOF) {
+                    printf ("%s", errorMessages[FILE_CLOSING_ERROR]);
+                    free(tree);
+                    return FILE_CLOSING_ERROR;
+                }
+
+                // Print the word count for each word in the loaded tree
+                printf("Загруженное дерево:\n");
+                printNode(loadedTree);
+                break;
+            }
+            case 0:
+                break;
             default:
-                printf("Invalid option\n");
+                printf("Неверный выбор!\n");
                 break;
         }
     }
+    // Print the word count for each word in the tree
+//    printf("Word count:\n");
+//    printNode(tree);
+
+    // Prompt user for word input
+//    char input[256];
+//    printf("Enter a word to search: ");
+//    scanf("%s", input);
+//    Node *searchResult = searchNode(tree, input);
+//    if (searchResult != NULL) printf("'%s' found %d times in the file.\n", searchResult->word, searchResult->count);
+//    else printf("'%s' not found in the file.\n", input);
+
+//  Prompt user for n value
+//    int n;
+//    printf("Введите n: ");
+//    scanf("%d", &n);
+//    printf("Топ %d часто встречающихся слов:\n", n);
+//    // Print the first n most frequent words
+//    Node *maxNode = findMax(tree, NULL, 0, "");
+//    while (n>0) {
+//        printf("%s: %d\n", maxNode->word, maxNode->count);
+//        maxNode = findMax(tree, NULL, maxNode->count, maxNode->word);
+//        n--;
+//    }
+
+    // Find the longest word
+//    Node *longestWord = findMaxLength(tree, NULL);
+//    if (longestWord != NULL) {
+//        printf("Самое длинное слово: %s\n", longestWord->word);
+//    }
+
+    // Find the shortest word
+//    Node *shortestWord = findMinLength(tree, NULL);
+//    if (shortestWord != NULL) {
+//        printf("Самое короткое слово: %s\n", shortestWord->word);
+//    }
+
+//    printf("Глубина дерева: %d\n", getDepth(tree));
+
+    // Save the tree to a file
+//    FILE *outputFile = fopen("tree.txt", "w");
+//    if (outputFile == NULL) {
+//        printf("%s\n", errorMessages[FILE_OPENING_ERROR]);
+//        return FILE_OPENING_ERROR;
+//    }
+//    saveTreeToFile(tree, outputFile);
+//    fclose(outputFile);
+
+    // Load the tree from the file
+//    FILE *inputFile = fopen("tree.txt", "r");
+//    if (inputFile == NULL) {
+//        printf("%s\n", errorMessages[FILE_OPENING_ERROR]);
+//        return FILE_OPENING_ERROR;
+//    }
+//    Node *loadedTree = loadTreeFromFile(inputFile);
+//    fclose(inputFile);
+//
+//    // Print the word count for each word in the loaded tree
+//    printf("Загруженное дерево:\n");
+//    printNode(loadedTree);
+
+    freeTree(tree);
+    return SUCCESS;
 }
